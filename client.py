@@ -55,8 +55,9 @@ batchid = None
 #recipe = "alpino"
 recipe = "/home/phuijgen/nlp/ruben/python/stanford.py"
 recipe = "kafnafparsermarten"
-intray = "aap"
+intray = None
 outtray = None
+touttray = None
 logtray = None
 fileext = "naf"
 client = None
@@ -368,6 +369,7 @@ class Client():
 
     def download_available(self, batchid = None):
         """
+        Download parses, logs and time-outs that are available for this batch.
         @param batchid: Batch handle for stand-alone usage
         @return: list of [ filename, tray, fileobj ]
         """
@@ -414,6 +416,10 @@ class Client():
 #
 # Methods of standalone-script
 #
+def maketray(traypath):
+    if not os.path.exists(traypath):
+        os.makedirs(traypath)
+
 def initscript():
     """
     Introduce the locations of the trays for the unprocessed and the processed documents.
@@ -421,11 +427,18 @@ def initscript():
     global intray
     global outtray
     global logtray
+    global touttray
     wd = os.getcwd()
     intray = os.path.join(wd, "intray")
     outtray = os.path.join(wd, "outtray")
     logtray = os.path.join(wd, "logtray")
-
+    touttray = os.path.join(wd, "touttray")
+    if not os.path.exists(intray):
+      logging.error("No input-files.")
+      sys.exit(10)
+    maketray(outtray)
+    maketray(logtray)
+    maketray(touttray)
 
 
 
@@ -490,7 +503,7 @@ def download_results_alt(intray, outtray):
                 if unprocessed_files_remaining(intray):
                         time.sleep(60)
                
-def download_results_alt2(intray, outtray, logtray, batchid):
+def download_results_alt2(intray, outtray, logtray, touttray, batchid):
         """
         Download the ready parses and logs.
         Write parses in outtray and logs in logtray.
@@ -500,13 +513,15 @@ def download_results_alt2(intray, outtray, logtray, batchid):
                 for [ filename, filetype, filecontent ] in client.download_available(batchid):
                     if filetype == 'parse':
                         filepath = os.path.join(outtray, filename)
+                    elif filetype == 'timeout':
+                        filepath = os.path.join(touttray, filename)
                     else:
                         filepath = os.path.join(logtray, filename)
                     infilpath = os.path.join(intray, filename)
                     f = open(filepath, 'w')
                     f.write(filecontent)
                     f.close
-                    if filetype == 'parse':
+                    if (filetype == 'parse') | (filetype == 'timeout'):
                         os.remove(infilpath)
                 if unprocessed_files_remaining(intray):
                         time.sleep(60)
@@ -521,6 +536,7 @@ if __name__ == '__main__':
   initscript()
   logging.info("Intray: {}".format(intray))
   logging.info("Outtray: {}".format(outtray))
+  logging.info("Timouttray: {}".format(touttray))
   logging.info("Logtray: {}".format(logtray))
   client = Client(batchid = batchid, recipe = recipe)
   if not client.batchid():
@@ -537,7 +553,7 @@ if __name__ == '__main__':
      upload_files(intray)
      client.start_batch(batchid)
      logging.info("Batch status: {}".format(client.batchstatus(batchid)))
-  download_results_alt2(intray, outtray, logtray, batchid)
+  download_results_alt2(intray, outtray, logtray, touttray, batchid)
   sys.exit(0)
 
 

@@ -6,7 +6,8 @@ VUNLPHOME = os.path.expanduser('~') + '/vunlp'
 # DATABASE:
 DBFILE = VUNLPHOME + "/vunlptextstore.db"
 # Webservice host:
-DEFAULT_URL = "http://localhost:8090"
+DEFAULT_URL = "http://nlp.labs.vu.nl/ws/"
+# DEFAULT_URL = "http://localhost:8090"
 LOCKFILE =  VUNLPHOME + "/lock/cronlock"
 CRONLOGFILE = VUNLPHOME + "/log/cronlog"
 # Supe-host: Access info
