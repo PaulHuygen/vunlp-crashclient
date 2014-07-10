@@ -91,7 +91,7 @@ def pack_status(status):
 def unpack_status(d):
     """ Retrieve status from dict from json
 
-    @param status:
+    @param d:
     @return: dict with status.
     """
     try:

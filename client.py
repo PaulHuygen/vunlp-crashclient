@@ -59,6 +59,7 @@ intray = None
 outtray = None
 touttray = None
 logtray = None
+errortray = None
 fileext = "naf"
 client = None
 import ntpath
@@ -171,8 +172,7 @@ class Client():
         r.raise_for_status()
         if r.text.__len__() > 0:
             return r.json()
-        else:
-            return None
+        return None
 
     def putrequest(self, request, payload):
         """Perform a POST request
@@ -255,8 +255,12 @@ class Client():
       """
       payload = []
       payload = vunlp.pack_recipe(recipe)
-      mess = self.postrequest(vunlp.REQUEST_ID.format(url=self.url), payload)
-      self._id = vunlp.unpack_batchid(mess)
+      try:
+         mess = self.postrequest(vunlp.REQUEST_ID.format(url=self.url), payload)
+         self._id = vunlp.unpack_batchid(mess)
+      except Exception as e:
+          logging.error("Cannot get Batchid")
+          sys.exit(10)
       return  self._id
 
 #    self.recipe = recipe
@@ -280,7 +284,12 @@ class Client():
       """
       self._set_check_batchid(batchid)
       payload = vunlp.pack_content_single(textid, text)
-      mess = self.postrequest(vunlp.REQUEST_BATCHITEM.format(url=self.url, batchid=self._id, item = 'text'), payload)
+      try:
+          mess = self.postrequest(vunlp.REQUEST_BATCHITEM.format(url=self.url, batchid=self._id, item = 'text'), payload)
+      except Exception as e:
+          return False
+      return True
+          
 
 #    log.debug("Uploading file {filename}".format(**locals()))
 #    self._set_check_batchid(batchid)
@@ -460,17 +469,33 @@ def initscript():
 #        batchid = client.initbatch(recipe)
 #        return batchid
 
-
 #def upload_files(client = client, batchid = batchid):
 
+
+def move_to_error_tray(filpath):
+    """
+    Move file from in-tray into error-tray.
+    create error-tray when necessary.
+    """
+    wd = os.getcwd()
+    errortray = os.path.join(wd, "errortray")
+    if not os.path.exists(errortray):
+        os.makedirs(errortray)
+    shutil.move(filpath, errortray)
+
 def upload_files(intray):    
-  print("Find: {}".format(intray + '/*.' + fileext))
+  logging.debug("Find: {}".format(intray + '/*.' + fileext))
   for infilpath in glob.glob(intray + '/*.' + fileext):
        filebasename = ntpath.basename(infilpath)
-       print("Upload {}".format(filebasename))
+       logging.debug("Upload {}".format(filebasename))
        f = open(infilpath, 'r')
-       client.upload(f.read(), filebasename)
+#       try:
+       uploadresult = client.upload(f.read(), filebasename)
        f.close()
+       if not uploadresult:
+#       except Exception as e :
+            logging.error("Could not upload {}".format(infilpath))
+            move_to_error_tray(infilpath)
        logging.info("Uploaded: {}".format(filebasename))
 
 def unprocessed_files_remaining(intray):
